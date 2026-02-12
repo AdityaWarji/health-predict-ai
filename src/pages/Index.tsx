@@ -6,6 +6,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import {
   Activity,
   Brain,
@@ -25,6 +27,8 @@ import {
   TrendingUp,
   FileText,
   RotateCcw,
+  AlertCircle,
+  UserCheck,
 } from "lucide-react";
 
 const SYMPTOM_CATEGORIES = {
@@ -63,114 +67,22 @@ type Prediction = {
   description: string;
   tips: string[];
   specialist: string;
+  alternative_diagnoses?: { disease: string; confidence: number }[];
+  urgency?: "routine" | "soon" | "urgent" | "emergency";
+  when_to_see_doctor?: string;
 };
-
-const MOCK_PREDICTIONS: Record<string, Prediction> = {
-  "Cough,Fever,Runny Nose": {
-    disease: "Common Flu (Influenza)",
-    confidence: 89,
-    severity: "low",
-    description: "Influenza is a viral infection attacking the respiratory system. Most recover within 1-2 weeks.",
-    tips: ["Rest and stay hydrated", "Take fever reducers as directed", "Avoid close contact with others", "Monitor symptoms for 48 hours"],
-    specialist: "General Physician",
-  },
-  "Fatigue,Fever,Headache": {
-    disease: "Viral Infection",
-    confidence: 82,
-    severity: "moderate",
-    description: "A systemic viral infection causing widespread symptoms. Usually self-limiting.",
-    tips: ["Get plenty of rest", "Stay well hydrated", "Take OTC pain relievers", "Consult a doctor if symptoms persist beyond 5 days"],
-    specialist: "Internal Medicine",
-  },
-  "Chest Pain,Dizziness": {
-    disease: "Hypertension",
-    confidence: 74,
-    severity: "high",
-    description: "High blood pressure that may require immediate medical attention and ongoing management.",
-    tips: ["Seek medical attention promptly", "Monitor blood pressure regularly", "Reduce sodium intake", "Avoid strenuous activities until evaluated"],
-    specialist: "Cardiologist",
-  },
-  "Dizziness,Fatigue,Vomiting": {
-    disease: "Food Poisoning",
-    confidence: 85,
-    severity: "moderate",
-    description: "Illness caused by consuming contaminated food or water. Usually resolves within 48 hours.",
-    tips: ["Stay hydrated with clear fluids", "Eat bland foods (BRAT diet)", "Avoid dairy and spicy foods", "Seek help if symptoms last > 3 days"],
-    specialist: "Gastroenterologist",
-  },
-  "Chest Pain,Cough,Fever": {
-    disease: "Bronchitis",
-    confidence: 78,
-    severity: "moderate",
-    description: "Inflammation of the bronchial tubes, commonly caused by viral infection.",
-    tips: ["Use a humidifier", "Avoid irritants and smoke", "Take cough suppressants at night", "Follow up with a doctor in 1 week"],
-    specialist: "Pulmonologist",
-  },
-  "Dizziness,Headache": {
-    disease: "Migraine",
-    confidence: 83,
-    severity: "low",
-    description: "A neurological condition causing intense headaches, often with sensory disturbances.",
-    tips: ["Rest in a dark, quiet room", "Apply cold compress to forehead", "Stay hydrated", "Track triggers in a headache diary"],
-    specialist: "Neurologist",
-  },
-  "Diarrhea,Nausea,Vomiting": {
-    disease: "Gastroenteritis",
-    confidence: 88,
-    severity: "moderate",
-    description: "Inflammation of the stomach and intestines, typically caused by viral or bacterial infection.",
-    tips: ["Oral rehydration is critical", "Avoid solid food until vomiting stops", "Wash hands frequently", "Seek help if blood in stool"],
-    specialist: "Gastroenterologist",
-  },
-  "Joint Pain,Muscle Ache,Stiffness": {
-    disease: "Rheumatoid Arthritis",
-    confidence: 71,
-    severity: "moderate",
-    description: "An autoimmune condition causing chronic inflammation in joints.",
-    tips: ["Apply warm compresses", "Gentle stretching exercises", "Anti-inflammatory medications", "Consult a rheumatologist"],
-    specialist: "Rheumatologist",
-  },
-};
-
-function getPrediction(symptoms: string[]): Prediction | null {
-  const key = symptoms.sort().join(",");
-  for (const [k, v] of Object.entries(MOCK_PREDICTIONS)) {
-    if (k.split(",").sort().join(",") === key) return v;
-  }
-  if (symptoms.length === 0) return null;
-  const fallbacks: Prediction[] = [
-    {
-      disease: "General Viral Infection",
-      confidence: 65,
-      severity: "low",
-      description: "A common viral infection with general symptoms. Usually resolves with rest.",
-      tips: ["Rest adequately", "Stay hydrated", "Monitor body temperature", "Consult a doctor if symptoms worsen"],
-      specialist: "General Physician",
-    },
-    {
-      disease: "Seasonal Allergy",
-      confidence: 58,
-      severity: "low",
-      description: "Allergic response to environmental triggers such as pollen, dust, or mold.",
-      tips: ["Use antihistamines", "Avoid known allergens", "Keep windows closed during high pollen", "Consider allergy testing"],
-      specialist: "Allergist",
-    },
-    {
-      disease: "Upper Respiratory Infection",
-      confidence: 72,
-      severity: "moderate",
-      description: "Infection of the upper respiratory tract including nose, throat, and sinuses.",
-      tips: ["Gargle with warm salt water", "Use saline nasal spray", "Get adequate sleep", "Take vitamin C supplements"],
-      specialist: "ENT Specialist",
-    },
-  ];
-  return fallbacks[symptoms.length % fallbacks.length];
-}
 
 const severityConfig = {
   low: { label: "Low Risk", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
   moderate: { label: "Moderate Risk", color: "bg-amber-100 text-amber-700 border-amber-200" },
   high: { label: "High Risk", color: "bg-red-100 text-red-700 border-red-200" },
+};
+
+const urgencyConfig: Record<string, { label: string; color: string }> = {
+  routine: { label: "Routine", color: "bg-emerald-100 text-emerald-700" },
+  soon: { label: "See Doctor Soon", color: "bg-amber-100 text-amber-700" },
+  urgent: { label: "Urgent", color: "bg-orange-100 text-orange-700" },
+  emergency: { label: "Emergency", color: "bg-red-100 text-red-700" },
 };
 
 type HistoryItem = { symptoms: string[]; prediction: Prediction; timestamp: Date };
@@ -182,6 +94,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [progressValue, setProgressValue] = useState(0);
 
   const filteredCategories = useMemo(() => {
     if (!search.trim()) return SYMPTOM_CATEGORIES;
@@ -201,20 +114,53 @@ const Index = () => {
     setResult(null);
   };
 
-  const predict = () => {
+  const predict = async () => {
     if (selected.length === 0) return;
     setLoading(true);
-    setTimeout(() => {
-      const prediction = getPrediction(selected);
-      setResult(prediction);
-      if (prediction) {
-        setHistory((prev) => [
-          { symptoms: [...selected], prediction, timestamp: new Date() },
-          ...prev.slice(0, 9),
-        ]);
+    setResult(null);
+    setProgressValue(0);
+
+    // Animate progress bar
+    const interval = setInterval(() => {
+      setProgressValue((prev) => {
+        if (prev >= 90) { clearInterval(interval); return 90; }
+        return prev + Math.random() * 15;
+      });
+    }, 300);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("predict-disease", {
+        body: { symptoms: selected },
+      });
+
+      clearInterval(interval);
+      setProgressValue(100);
+
+      if (error) {
+        throw new Error(error.message || "Prediction failed");
       }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      const prediction: Prediction = data;
+      setResult(prediction);
+      setHistory((prev) => [
+        { symptoms: [...selected], prediction, timestamp: new Date() },
+        ...prev.slice(0, 9),
+      ]);
+    } catch (err: any) {
+      console.error("Prediction error:", err);
+      toast({
+        title: "Prediction Failed",
+        description: err.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 1800);
+      setTimeout(() => setProgressValue(0), 500);
+    }
   };
 
   const reset = () => {
@@ -236,7 +182,7 @@ const Index = () => {
           >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-foreground/15 backdrop-blur-sm text-primary-foreground text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
-              AI-Powered Healthcare Analysis
+              Powered by Google Gemini AI
             </div>
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="p-3 rounded-2xl bg-primary-foreground/15 backdrop-blur-sm">
@@ -247,12 +193,12 @@ const Index = () => {
               </h1>
             </div>
             <p className="text-primary-foreground/80 text-lg md:text-xl max-w-2xl mx-auto">
-              Advanced machine learning model for preliminary disease prediction based on symptom analysis
+              Real-time disease prediction powered by advanced AI — analyze your symptoms instantly
             </p>
             <div className="flex items-center justify-center gap-6 mt-8 text-primary-foreground/70 text-sm">
-              <span className="flex items-center gap-1.5"><Brain className="w-4 h-4" /> ML-Powered</span>
-              <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4" /> HIPAA Aware</span>
-              <span className="flex items-center gap-1.5"><TrendingUp className="w-4 h-4" /> 85%+ Accuracy</span>
+              <span className="flex items-center gap-1.5"><Brain className="w-4 h-4" /> Google Gemini</span>
+              <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4" /> Real-time AI</span>
+              <span className="flex items-center gap-1.5"><TrendingUp className="w-4 h-4" /> Live Analysis</span>
             </div>
           </motion.div>
         </div>
@@ -269,9 +215,9 @@ const Index = () => {
           className="grid grid-cols-2 md:grid-cols-4 gap-4"
         >
           {[
-            { label: "Symptoms Database", value: `${ALL_SYMPTOMS.length}+`, icon: FileText },
-            { label: "Disease Models", value: "50+", icon: Brain },
-            { label: "Avg Accuracy", value: "85%", icon: TrendingUp },
+            { label: "Symptoms Available", value: `${ALL_SYMPTOMS.length}+`, icon: FileText },
+            { label: "AI Model", value: "Gemini", icon: Brain },
+            { label: "Response Time", value: "~3s", icon: TrendingUp },
             { label: "Analyses Done", value: history.length.toString(), icon: Activity },
           ].map((stat) => (
             <Card key={stat.label} className="glass-card border shadow-sm">
@@ -437,7 +383,7 @@ const Index = () => {
                   {loading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
-                      Analyzing Symptoms…
+                      AI Analyzing…
                     </>
                   ) : (
                     <>
@@ -474,10 +420,10 @@ const Index = () => {
                     </div>
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">Analyzing Symptom Patterns</p>
-                    <p className="text-sm text-muted-foreground">Running ML model inference…</p>
+                    <p className="font-semibold text-foreground">Google Gemini AI is Analyzing</p>
+                    <p className="text-sm text-muted-foreground">Processing {selected.length} symptom{selected.length > 1 ? "s" : ""} through neural network…</p>
                   </div>
-                  <Progress value={66} className="max-w-xs mx-auto h-2" />
+                  <Progress value={progressValue} className="max-w-xs mx-auto h-2" />
                 </CardContent>
               </Card>
             </motion.div>
@@ -500,7 +446,11 @@ const Index = () => {
                     <div className="p-1.5 rounded-lg gradient-primary">
                       <Brain className="w-4 h-4 text-primary-foreground" />
                     </div>
-                    Prediction Result
+                    AI Prediction Result
+                    <Badge variant="outline" className="ml-auto text-xs font-normal">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Gemini AI
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -516,20 +466,64 @@ const Index = () => {
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Confidence</p>
                         <p className="text-3xl font-bold gradient-text">{result.confidence}%</p>
                       </div>
-                      <div className={`p-3 rounded-xl text-center text-xs font-semibold border ${severityConfig[result.severity].color}`}>
-                        {severityConfig[result.severity].label}
+                      <div className={`p-3 rounded-xl text-center text-xs font-semibold border ${severityConfig[result.severity]?.color || severityConfig.low.color}`}>
+                        {severityConfig[result.severity]?.label || "Unknown"}
                       </div>
                     </div>
                   </div>
 
-                  {/* Recommended Specialist */}
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-muted">
-                    <Stethoscope className="w-5 h-5 text-primary shrink-0" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Recommended Specialist</p>
-                      <p className="font-semibold text-foreground">{result.specialist}</p>
+                  {/* Urgency & Specialist */}
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-muted">
+                      <Stethoscope className="w-5 h-5 text-primary shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Recommended Specialist</p>
+                        <p className="font-semibold text-foreground">{result.specialist}</p>
+                      </div>
                     </div>
+                    {result.urgency && (
+                      <div className="flex items-center gap-3 p-4 rounded-xl bg-muted">
+                        <AlertCircle className="w-5 h-5 text-primary shrink-0" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Urgency Level</p>
+                          <p className="font-semibold text-foreground">
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs ${urgencyConfig[result.urgency]?.color || ""}`}>
+                              {urgencyConfig[result.urgency]?.label || result.urgency}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* When to see doctor */}
+                  {result.when_to_see_doctor && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-accent/30 border border-primary/10">
+                      <UserCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">When to See a Doctor</p>
+                        <p className="text-sm text-foreground">{result.when_to_see_doctor}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Alternative Diagnoses */}
+                  {result.alternative_diagnoses && result.alternative_diagnoses.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-primary" />
+                        Alternative Diagnoses
+                      </h4>
+                      <div className="grid sm:grid-cols-2 gap-2.5">
+                        {result.alternative_diagnoses.map((alt, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border">
+                            <span className="text-sm font-medium text-foreground">{alt.disease}</span>
+                            <span className="text-xs font-semibold text-muted-foreground">{alt.confidence}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Health Tips */}
                   <div>
@@ -593,7 +587,7 @@ const Index = () => {
                           </p>
                         </div>
                         <div className="flex items-center gap-3 shrink-0 ml-3">
-                          <span className={`text-xs font-medium px-2 py-1 rounded-full border ${severityConfig[item.prediction.severity].color}`}>
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full border ${severityConfig[item.prediction.severity]?.color || severityConfig.low.color}`}>
                             {item.prediction.confidence}%
                           </span>
                           <span className="text-xs text-muted-foreground">
