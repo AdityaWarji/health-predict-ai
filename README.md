@@ -11,6 +11,25 @@ The AI Symptom Prediction System allows users to select symptoms through a simpl
 This system is designed for educational purposes and health awareness only and does not replace professional medical diagnosis.
 
 ---
+## Demo
+
+### Home Page
+![Home](home.png)
+
+### Symptom Prediction
+![Predict](predict.png)
+
+### Possible Conditions
+![Conditions](conditions.png)
+
+### Recommended Medicines
+![Medicines](medicines.png)
+
+### Precautions & Doctor Consultation
+![Precautions](precautions.png)
+
+---
+
 
 ## Features
 - Symptom selection interface
