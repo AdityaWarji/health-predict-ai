@@ -75,6 +75,7 @@ streamlit run app.py
 
 ## Author
 Aditya Warji
+
 KLE College of Engineering and Technology (KLECET)
 
 ---
