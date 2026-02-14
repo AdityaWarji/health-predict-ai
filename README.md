@@ -1,73 +1,83 @@
-# Welcome to your Lovable project
+# AI Symptom Prediction System
 
-## Project info
+A machine learning–based healthcare decision-support application that predicts possible diseases from user-selected symptoms.  
+This project demonstrates how Artificial Intelligence can assist in early health awareness and preventive healthcare.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+## Project Overview
+The AI Symptom Prediction System allows users to select symptoms through a simple web interface. A trained machine learning classification model analyzes the selected symptoms and predicts the most likely disease along with a confidence score.
 
-There are several ways of editing your application.
+This system is designed for educational purposes and health awareness only and does not replace professional medical diagnosis.
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Features
+- Symptom selection interface
+- Machine learning disease prediction
+- Confidence score display
+- Lightweight and fast prediction
+- Simple and user-friendly UI
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## Tech Stack
+- Python
+- Pandas
+- Scikit-learn
+- Streamlit
+- Machine Learning (Decision Tree Classifier)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Project Structure
+AI_Symptom_Predictor
+│
+├── dataset.csv
+├── train_model.py
+├── app.py
+├── model.pkl
+└── README.md
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## How It Works
+1. Dataset containing symptoms and diseases is loaded
+2. Machine learning model is trained using a classification algorithm
+3. User selects symptoms in the web interface
+4. Model predicts possible disease
+5. Result is displayed with confidence score
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Installation & Run
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Clone the repository:
+git clone <your-repo-link>
+cd AI_Symptom_Predictor
 
-**Edit a file directly in GitHub**
+Install dependencies:
+pip install pandas scikit-learn streamlit
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Run the application:
+streamlit run app.py
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Future Improvements
+- Larger medical dataset
+- Mobile application version
+- Doctor consultation integration
+- Cloud deployment
+- Improved prediction accuracy
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## Author
+Sampada Naik  
+KLE College of Engineering and Technology (KLECET)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Disclaimer
+This project is for educational and awareness purposes only and should not be used as a substitute for professional medical advice.
