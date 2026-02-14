@@ -74,7 +74,7 @@ streamlit run app.py
 ---
 
 ## Author
-Sampada Naik  
+Aditya Warji
 KLE College of Engineering and Technology (KLECET)
 
 ---
