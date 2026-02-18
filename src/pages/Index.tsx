@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -195,10 +196,17 @@ const Index = () => {
             <p className="text-primary-foreground/80 text-lg md:text-xl max-w-2xl mx-auto">
               Real-time disease prediction powered by advanced AI — analyze your symptoms instantly
             </p>
-            <div className="flex items-center justify-center gap-6 mt-8 text-primary-foreground/70 text-sm">
+            <div className="flex items-center justify-center gap-6 mt-6 text-primary-foreground/70 text-sm">
               <span className="flex items-center gap-1.5"><Brain className="w-4 h-4" /> Google Gemini</span>
               <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4" /> Real-time AI</span>
               <span className="flex items-center gap-1.5"><TrendingUp className="w-4 h-4" /> Live Analysis</span>
+            </div>
+            <div className="mt-6">
+              <Link to="/project">
+                <Button variant="outline" className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20">
+                  <FileText className="w-4 h-4 mr-2" /> Project Details
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>
